@@ -75,9 +75,10 @@ const authStore = useAuthStore()
 const fetchContestants = async () => {
   try {
     const [verifiedRes, allRes] = await Promise.all([
-      apiClient.get('contest/verified-contestants/'),
-      apiClient.get('contest/contestants/')
-    ])
+    apiClient.get('verified-contestants/'),
+     apiClient.get('all-contestants/')
+])
+
     verifiedContestants.value = verifiedRes.data
     allContestants.value = allRes.data
   } catch (err) {
@@ -97,10 +98,15 @@ const fetchContestants = async () => {
 const performDraw = async () => {
   isDrawing.value = true
   try {
-    const response = await apiClient.post('contest/draw-winner/', {})
+    const response = await apiClient.post('draw-winner/', {});
     router.push({ name: 'winner', query: { winnerData: JSON.stringify(response.data) } })
   } catch (err) {
-    alert(err.response?.data?.error || 'Error al realizar el sorteo.')
+    if (err.response?.status === 401) {
+      authStore.logout()
+      router.push({ name: 'login' })
+    } else {
+      alert(err.response?.data?.error || 'Error al realizar el sorteo.')
+    }
   } finally {
     isDrawing.value = false
   }
@@ -108,9 +114,6 @@ const performDraw = async () => {
 
 onMounted(fetchContestants)
 </script>
-
-
-
 
 <style scoped>
 .container {

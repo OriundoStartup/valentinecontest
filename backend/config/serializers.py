@@ -1,29 +1,44 @@
+from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from .models import Contestant
 
-# Se define una clase llamada 'MyTokenObtainPairSerializer' que hereda de
-# 'TokenObtainPairSerializer', la clase base de Django REST Framework Simple JWT.
-# Esto nos permite extender su funcionalidad.
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
-    """
-    Serializador personalizado para generar tokens JWT.
-    
-    Este serializador extiende el TokenObtainPairSerializer para incluir
-    información adicional del usuario (como el email) en el token.
-    """
+    username_field = 'email'
+
+    def validate(self, attrs):
+        email = attrs.get('email')
+        password = attrs.get('password')
+
+        try:
+            contestant = Contestant.objects.get(email=email)
+        except Contestant.DoesNotExist:
+            raise serializers.ValidationError('Correo no registrado.')
+
+        if not contestant.check_password(password):
+            raise serializers.ValidationError('Contraseña incorrecta.')
+
+        if not contestant.is_verified:
+            raise serializers.ValidationError('Tu cuenta no está verificada.')
+
+        # Validación JWT estándar
+        data = super().validate({'username': contestant.email, 'password': password})
+
+        # ✅ Datos extra para el frontend
+        data['email'] = contestant.email
+        data['full_name'] = contestant.full_name
+        data['id'] = contestant.id
+
+        return data
+
     @classmethod
     def get_token(cls, user):
-        """
-        Sobrescribe el método 'get_token' para añadir datos personalizados.
-
-        Este método se encarga de crear el token y añadirle 'claims' adicionales.
-        """
-        # Se llama al método get_token de la clase padre para obtener el token
-        # JWT estándar, que ya contiene la información básica del usuario.
         token = super().get_token(user)
 
-        # Se accede al token como un diccionario y se le añade una nueva clave
-        # 'email' con el valor del email del objeto 'user'.
+        # ✅ Claims personalizados dentro del token
         token['email'] = user.email
+        token['full_name'] = getattr(user, 'full_name', user.get_full_name())
 
-        # Se retorna el token modificado, que ahora incluye el email.
         return token
+
+    class Meta:
+        fields = ['email', 'password']

@@ -3,31 +3,52 @@ import { ref } from 'vue';
 
 export const useAuthStore = defineStore('auth', () => {
   const isAuthenticated = ref(false);
+  const token = ref(null);
+  const fullName = ref(null);
+  const email = ref(null);
 
-  // Acción para inicializar el estado de autenticación al cargar la tienda
   const initializeAuth = () => {
-    const token = localStorage.getItem('access_token');
-    if (token) {
+    const storedToken = localStorage.getItem('access_token');
+    const storedName = localStorage.getItem('full_name');
+    const storedEmail = localStorage.getItem('email');
+
+    if (storedToken) {
+      token.value = storedToken;
+      fullName.value = storedName;
+      email.value = storedEmail;
       isAuthenticated.value = true;
     }
   };
 
-  const login = (token) => {
-    localStorage.setItem('access_token', token);
+  const login = (accessToken, userInfo = {}) => {
+    token.value = accessToken;
+    fullName.value = userInfo.full_name || '';
+    email.value = userInfo.email || '';
     isAuthenticated.value = true;
+
+    localStorage.setItem('access_token', accessToken);
+    localStorage.setItem('full_name', fullName.value);
+    localStorage.setItem('email', email.value);
   };
 
   const logout = () => {
-    localStorage.removeItem('access_token');
+    token.value = null;
+    fullName.value = null;
+    email.value = null;
     isAuthenticated.value = false;
+
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('full_name');
+    localStorage.removeItem('email');
   };
 
-  // Llama a la inicialización de forma automática
-  // Esto asegura que la tienda cargue el estado de autenticación de inmediato
   initializeAuth();
 
   return {
     isAuthenticated,
+    token,
+    fullName,
+    email,
     login,
     logout,
   };

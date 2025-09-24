@@ -2,12 +2,19 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
+from rest_framework_simplejwt.views import TokenObtainPairView
+
 from .models import Contestant
-from .serializers import ContestantSerializer
+from .serializers import ContestantSerializer, MyTokenObtainPairSerializer
 from .tasks import send_verification_email_task, send_winner_notification_task
+
 import random
 
-# Registro y listado de concursantes
+# 🔐 Login personalizado con JWT
+class MyTokenObtainPairView(TokenObtainPairView):
+    serializer_class = MyTokenObtainPairSerializer
+
+# 📝 Registro de concursantes
 class ContestantRegisterAPIView(APIView):
     permission_classes = [AllowAny]
 
@@ -34,7 +41,7 @@ class ContestantRegisterAPIView(APIView):
             )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-# Verificación de cuenta
+# ✅ Verificación de cuenta
 class ContestantVerifyAPIView(APIView):
     permission_classes = [AllowAny]
 
@@ -52,7 +59,7 @@ class ContestantVerifyAPIView(APIView):
         except Contestant.DoesNotExist:
             return Response({'error': 'Enlace de verificación inválido o expirado.'}, status=status.HTTP_400_BAD_REQUEST)
 
-# Listado de concursantes verificados
+# 📋 Listado de concursantes verificados
 class VerifiedContestantsListAPIView(APIView):
     permission_classes = [IsAuthenticated, IsAdminUser]
 
@@ -61,23 +68,36 @@ class VerifiedContestantsListAPIView(APIView):
         serializer = ContestantSerializer(contestants, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-# Sorteo del ganador
-class DrawWinnerAPIView(APIView):
+# 📋 Listado completo de concursantes
+class AllContestantsView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def get(self, request):
+        contestants = Contestant.objects.all().order_by('-date_joined')
+        serializer = ContestantSerializer(contestants, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+# 🎉 Sorteo del ganador
+class DrawWinnerView(APIView):
     permission_classes = [IsAuthenticated, IsAdminUser]
 
     def post(self, request):
         verified_contestants = Contestant.objects.filter(is_verified=True)
         print(f"Número de concursantes verificados: {verified_contestants.count()}")  # Para depuración
-        
+
         if not verified_contestants.exists():
             return Response({'error': 'No hay concursantes verificados para realizar un sorteo.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Si el código llega hasta aquí, significa que hay al menos un concursante.
+        # Reiniciar estado de ganadores anteriores
         Contestant.objects.filter(is_winner=True).update(is_winner=False)
+
+        # Seleccionar nuevo ganador
         winner = random.choice(verified_contestants)
         winner.is_winner = True
         winner.save()
+
         send_winner_notification_task.delay(winner.email, winner.full_name)
+
         return Response({
             'full_name': winner.full_name,
             'email': winner.email

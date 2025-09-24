@@ -3,8 +3,8 @@
     <h2>Inicio de Sesión (Admin)</h2>
     <form @submit.prevent="submitLogin">
       <div class="form-group">
-        <label for="email">Correo Electrónico</label>
-        <input type="email" id="email" v-model="form.email" required autocomplete="email">
+        <label for="username">Nombre de Usuario</label>
+        <input type="text" id="username" v-model="form.username" required autocomplete="username">
       </div>
       <div class="form-group">
         <label for="password">Contraseña</label>
@@ -25,7 +25,7 @@ import { useAuthStore } from '../stores/auth';
 import apiClient from '../utils/axios';
 
 const form = ref({
-  email: '',
+  username: '',
   password: ''
 });
 
@@ -39,20 +39,25 @@ const submitLogin = async () => {
   isSubmitting.value = true;
   loginError.value = null;
 
+  console.log("Payload enviado:", {
+    username: form.value.username,
+    password: form.value.password
+  });
+
   try {
     const response = await apiClient.post('token/', {
-      username: form.value.email, // <-- Corregido para enviar "username"
-      password: form.value.password,
+      username: form.value.username,
+      password: form.value.password
     });
-    
+
     authStore.login(response.data.access);
     router.push({ name: 'dashboard' });
 
   } catch (error) {
+    console.error("Login failed:", error.response?.data || error.message);
     if (error.response && error.response.status === 401) {
-      loginError.value = 'Correo o contraseña incorrectos.';
+      loginError.value = 'Usuario o contraseña incorrectos.';
     } else {
-      console.error('Login failed:', error);
       loginError.value = 'Ocurrió un error al intentar iniciar sesión.';
     }
   } finally {

@@ -1,38 +1,49 @@
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from django.contrib.auth.models import User
 from .models import Contestant
 
-# Se obtiene el modelo de usuario activo en el proyecto (ej. Contestant).
+# 🔐 Login personalizado con validación y datos extra
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
-    """
-    Personaliza el serializador de token para usar el correo electrónico como nombre de usuario.
-    """
-    @classmethod
-    def get_token(cls, user):
-        token = super().get_token(user)
-        token['email'] = user.email
-        return token
+    username_field = 'email'
 
     def validate(self, attrs):
-        # Valida las credenciales utilizando el correo electrónico.
-        # Aquí se obtiene el usuario por email en lugar de username.
+        email = attrs.get('email')
+        password = attrs.get('password')
+
         try:
-            user = User.objects.get(email=attrs['username'])
-        except User.DoesNotExist:
-            raise serializers.ValidationError('Correo o contraseña incorrectos.')
-        
-        attrs['username'] = user.username
-        data = super().validate(attrs)
+            contestant = Contestant.objects.get(email=email)
+        except Contestant.DoesNotExist:
+            raise serializers.ValidationError('Correo no registrado.')
+
+        if not contestant.check_password(password):
+            raise serializers.ValidationError('Contraseña incorrecta.')
+
+        if not contestant.is_verified:
+            raise serializers.ValidationError('Tu cuenta no está verificada.')
+
+        # Validación JWT estándar
+        data = super().validate({'username': contestant.email, 'password': password})
+
+        # ✅ Datos extra para el frontend
+        data['full_name'] = contestant.full_name
+        data['email'] = contestant.email
+        data['id'] = contestant.id
+
         return data
 
+    class Meta:
+        fields = ['email', 'password']
 
+
+# 📝 Registro y edición de concursantes
 class ContestantSerializer(serializers.ModelSerializer):
     class Meta:
         model = Contestant
         fields = ['full_name', 'email', 'phone']
         read_only_fields = ['is_verified', 'is_staff', 'is_active', 'is_winner', 'date_joined']
 
+
+# 🔐 Validación de contraseña doble
 class PasswordSerializer(serializers.Serializer):
     password = serializers.CharField(
         write_only=True,
@@ -50,6 +61,8 @@ class PasswordSerializer(serializers.Serializer):
             raise serializers.ValidationError({"password": "Las contraseñas no coinciden."})
         return data
 
+
+# 📋 Detalle extendido del concursante
 class ContestantDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Contestant
