@@ -14,7 +14,7 @@ POST /api/send-winner-email/	         Envío de correo al ganador (usado por Cel
 
 Requisito	              Estado	   Detalles
 Inscripción con validación	✅	Ya lo tienes con validación de email
-Verificación por correo 	✅	Se genera token y se envía el enlace
+Verificación por correo 	X	Se genera token y se envía el enlace
 Creación de contraseña	        ✅	VerifyView.vue lo permite
 Confirmación de participación	✅	Mensaje claro tras verificación
 Sorteo de ganador	        ✅	Botón en DashboardView.vue
