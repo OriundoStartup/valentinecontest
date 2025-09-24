@@ -139,6 +139,31 @@ Panel de Administración
 ✅ Test Unitario
 *Bash
 python manage.py test valentine_contest.tests.test_draw
+-------------------------------------------------------------------------------------
+## 📸 Flujo de la aplicación
+
+### 📝 Formulario de inscripción
+![Formulario](capturas/Form_Concurso.png)
+
+### ✅ Registro exitoso
+![Éxito en el formulario](capturas/Exito_Form_concurso.png)
+
+### 🔐 Login de usuario
+![Login](capturas/Form_Login.png)
+
+### 🧑‍💼 Panel de administración
+![Panel Admin](capturas/Panel_Admin.png)
+
+### 📊 Dashboard Django
+![Dashboard Django](capturas/Dashboard_Django.png)
+
+### 🐳 Dashboard Docker
+![Dashboard Docker](capturas/Dashboard_docker.png)
+
+### 🎉 Ganador del concurso
+![Ganador](capturas/Exito_ganador.png)
+
+
 
 --------------------------------------------------------------------------------------
 👨‍💻 Autor
